@@ -25,8 +25,8 @@ class Paragrapher:
             paragraphs = self.get_paragraphs(chunk)
             paragraphed_text += paragraphs + '\n'
 
-        output_filename = filename.replace('.txt', '_paragraphed.txt')
-        with open(os.path.join(self.output_folder, output_filename), 'w') as file:
+        # output_filename = filename.replace('.txt', '_paragraphed.txt')
+        with open(os.path.join(self.output_folder, filename), 'w') as file:
             file.write(paragraphed_text)
 
     def split_into_chunks(self, text, max_length):

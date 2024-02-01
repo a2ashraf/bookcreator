@@ -11,8 +11,9 @@ class Rephraser:
 
     def process_files(self):
         for filename in os.listdir(self.source_folder):
-            if filename.endswith('_paragraphed.txt'):
-                self.process_file(filename)
+            self.process_file(filename)
+            # if filename.endswith('_paragraphed.txt'):
+
 
     def process_file(self, filename):
         with open(os.path.join(self.source_folder, filename), 'r') as file:
@@ -24,8 +25,8 @@ class Rephraser:
                 rephrased_paragraph = self.rephrase_paragraph(paragraph)
                 rephrased_text += rephrased_paragraph + '\n\n'
 
-        output_filename = filename.replace('_paragraphed.txt', '_rephrased.txt')
-        with open(os.path.join(self.output_folder, output_filename), 'w') as file:
+        # output_filename = filename.replace('_paragraphed.txt', '_rephrased.txt')
+        with open(os.path.join(self.output_folder, filename), 'w') as file:
             file.write(rephrased_text)
 
     def rephrase_paragraph(self, paragraph):

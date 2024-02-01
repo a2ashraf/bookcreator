@@ -26,7 +26,7 @@ output_path = f'{transcribed_text_path}{target_language}/'.lower()
 gpt_model = GPT_MODEL
 gcs_blob_name = "extracted_audio.mp3"  # Placeholder name of file in GCS bucket
 
-
+# Step 5 - With the rewritten files, it then translates it
 def translate_paragraph(paragraph, target_language):
     response = openai.chat.completions.create(
         model=gpt_model,
@@ -53,6 +53,15 @@ def translate_file(input_file_path, output_file_path, target_language):
             if paragraph.strip():
                 translated_paragraph = translate_paragraph(paragraph, target_language)
                 file.write(translated_paragraph + '\n\n')
+
+def translate_to_language(target_language):
+    for file_name in os.listdir(transcribed_text_path):
+        if file_name.endswith('.txt'):
+            input_file = f'{transcribed_text_path}rephrased_transcript/{file_name}'
+            print(input_file)
+            output_file = f'{output_path}{os.path.splitext(file_name)[0]}_{target_language[:2].lower()}.txt'
+            print(output_file)
+            translate_file(input_file, output_file, target_language)
 
 
 # Step 1  - takes file, splits it, - done
@@ -155,15 +164,10 @@ def rewrite_each_paragraph():
     rephraser = Rephraser(source_folder, openai_key)
     rephraser.process_files()
 
+split_audiobook_into_audio_segments_by_chapters()   #step 1: Take audiobook and create chapters from it
+get_transcripts_from_audio()                        #step 2: Get the text from the audiobook
+paragraphize_text()                                 #step 3: create paragraphs from the long form text obtained in step 2
+rewrite_each_paragraph()                            #step 4: Rewrite all paragraphs using openai
+translate_to_language(target_language)              #step 5: Translate to a desired language
 
-# Step 5 - With the rewritten files, it then translates it
-def translate_to_language(target_language):
-    for file_name in os.listdir(transcribed_text_path):
-        if file_name.endswith('.txt'):
-            input_file = f'{transcribed_text_path}{file_name}'
-            print(input_file)
-            output_file = f'{output_path}{os.path.splitext(file_name)[0]}_{target_language[:2].lower()}.txt'
-            print(output_file)
-            translate_file(input_file, output_file, target_language)
-
-
+#Step 6: Create audio book via eleven labs from new book:
