@@ -5,27 +5,31 @@ from audio_splitter import AudioSplitter
 from audiobook_extractor import AudiobookMetadataExtractor
 from google.cloud import storage, speech
 from paragrapher import Paragrapher
+from rephraser import Rephraser
+from config import OPENAI_API_KEY
+from config import GPT_MODEL
+from config import GCS_PROJECT
+from config import GCS_BUCKET
 
-
-root_path = "/Users/Ahsan/Desktop/part1/"
-openai.api_key = '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'
 target_language = 'French'  # Change to your target language
-output_path = f'{root_path}{target_language}/'.lower()
+openai.api_key = OPENAI_API_KEY
+google_cloud_project = GCS_PROJECT
 
-source_path = "/Users/Ahsan/Documents/WORK/audiobooks_project/source_book/"
 source_file = "prayer_art_of_believing.mp3"
-split_files_path = "/Users/Ahsan/Documents/WORK/audiobooks_project/output/"
 base_path = "/Users/Ahsan/Documents/WORK/audiobooks_project/"
+source_path = f"{base_path}source_book/"
+split_files_path = f"{base_path}output/"
 audio = AudioSegment.from_file(f"{source_path}{source_file}")
-gcs_bucket_name = "ahsanpodcast"  # Replace with your GCS bucket name
-gcs_blob_name = "extracted_audio.mp3"  # Replace with the desired GCS blob name
-transcribed_text_path = f'/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments/'
-google_cloud_project = "melodic-zoo-242102"
+gcs_bucket_name = GCS_BUCKET  # Replace with your GCS bucket name
+transcribed_text_path = f'{base_path}transcribed_segments/'
+output_path = f'{transcribed_text_path}{target_language}/'.lower()
+gpt_model = GPT_MODEL
+gcs_blob_name = "extracted_audio.mp3"  # Placeholder name of file in GCS bucket
 
 
 def translate_paragraph(paragraph, target_language):
     response = openai.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model=gpt_model,
         messages=[
             {"role": "user",
              "content": f"Translate the following English text to {target_language}: {paragraph}"}
@@ -51,14 +55,6 @@ def translate_file(input_file_path, output_file_path, target_language):
                 file.write(translated_paragraph + '\n\n')
 
 
-# for file_name in os.listdir(root_path):
-#     if file_name.endswith('.txt'):
-#         input_file = f'{root_path}{file_name}'
-#         print(input_file)
-#         output_file = f'{output_path}{os.path.splitext(file_name)[0]}_{target_language[:2].lower()}.txt'
-#         print(output_file)
-#         translate_file(input_file, output_file, target_language)
-
 # Step 1  - takes file, splits it, - done
 def get_chapters_from_file(audiobook_path):
     extractor = AudiobookMetadataExtractor(audiobook_path)
@@ -75,7 +71,6 @@ def split_input_file_into_segments(chapters_by_time):
 
 
 # Step 2 - sends each split file to google to get text - todo
-
 def upload_audio_to_gcs(local_audio_file, gcs_bucket_name, gcs_blob_name):
     # Convert the original file to mono and save it
     mono_audio = "mono_audio/"
@@ -122,42 +117,53 @@ def transcribe_long_audio_with_google_cloud(gcs_uri):
     return transcribed_text.strip()
 
 
+# Step 6 - create the audio book version of it.
+
+# start - step 1 - splits one audiobook into chapter segments
+def split_audiobook_into_audio_segments_by_chapters():
+    audiobook_path = os.path.join(source_path, "prayer_art_of_believing.mp3")
+    chapters = get_chapters_from_file(audiobook_path)
+    split_input_file_into_segments(chapters)
+
+
+# step 2: get transcripts for each file - done
+def get_transcripts_from_audio():
+    for i, segment_file_name in enumerate(sorted(os.listdir(split_files_path))):
+        if segment_file_name.endswith(".wav"):
+            segment_file_path = os.path.join(split_files_path, segment_file_name)
+            upload_audio_to_gcs(segment_file_path, gcs_bucket_name, gcs_blob_name)
+
+            gcs_uri = f"gs://{gcs_bucket_name}/{gcs_blob_name}"
+            transcribed_text = transcribe_long_audio_with_google_cloud(gcs_uri)
+
+            transcript_file = os.path.join(transcribed_text_path, f"transcript_{i}.txt")
+            with open(transcript_file, "w") as file:
+                file.write(transcribed_text)
+
+
+# Step 3 - With the list of text files, it splits it up into paragraphs done
+def paragraphize_text():
+    openai_key = OPENAI_API_KEY
+    paragrapher = Paragrapher(transcribed_text_path, openai_key)
+    paragrapher.process_files()
+
+
+# Step 4 - With each paragraph it rewrites it - done
+def rewrite_each_paragraph():
+    source_folder = os.path.join(transcribed_text_path, "paragraphed_transcript")
+    openai_key = OPENAI_API_KEY
+    rephraser = Rephraser(source_folder, openai_key)
+    rephraser.process_files()
 
 
 # Step 5 - With the rewritten files, it then translates it
+def translate_to_language(target_language):
+    for file_name in os.listdir(transcribed_text_path):
+        if file_name.endswith('.txt'):
+            input_file = f'{transcribed_text_path}{file_name}'
+            print(input_file)
+            output_file = f'{output_path}{os.path.splitext(file_name)[0]}_{target_language[:2].lower()}.txt'
+            print(output_file)
+            translate_file(input_file, output_file, target_language)
 
-# start - step 1 - done
-# audiobook_path = os.path.join(source_path, "prayer_art_of_believing.mp3")
-# chapters = get_chapters_from_file(audiobook_path)
-# split_input_file_into_segments(chapters)
 
-# step 2: get transcripts for each file - done
-# for i, segment_file_name in enumerate(sorted(os.listdir(split_files_path))):
-#     if segment_file_name.endswith(".wav"):
-#         segment_file_path = os.path.join(split_files_path, segment_file_name)
-#         upload_audio_to_gcs(segment_file_path, gcs_bucket_name, gcs_blob_name)
-#
-#         gcs_uri = f"gs://{gcs_bucket_name}/{gcs_blob_name}"
-#         transcribed_text = transcribe_long_audio_with_google_cloud(gcs_uri)
-#
-#         transcript_file = os.path.join(transcribed_text_path, f"transcript_{i}.txt")
-#         with open(transcript_file, "w") as file:
-#             file.write(transcribed_text)
-
-# Step 3 - With the list of text files, it splits it up into paragraphs done
-# Solution:
-#  1) Grab text from file, split it up into 3500 chunks and for the last chunk, continue until you see a period.
-#  2) Ask gpt to break text up into paragraphs, write the result to a file and keep going until file is done
-# folder_path = '/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments'
-# openai_key = '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'
-# paragrapher = Paragrapher(folder_path, openai_key)
-# paragrapher.process_files()
-
-# Step 4 - With each paragraph it rewrites it
-#Solution:
-# 1) I have a folder which contains files where each file contains paragraphs.
-# 2) I want to write a script that will reach each file, and then for each paragraph, rephrase it/reword it using the following openai prompt:
-#   "Rewrite the paragraph while expanding on the topic, remove any references to specific names and where examples are given of popular figures, replace them with alternative examples which communicate the same point. The goal is to have the paragraph rewritten so that it avoids being too similar to the source paragraph while maintaining the context. Split the results into multiple paragraphs containing 3 sentences without reducing the content"
-# 3) Write the results into a file with the suffix _rephrased. For each source file, there should be an equivalaent _rephrased file.
-# 4) /Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments, that is an example of where the parent folder is, this is an example of where the source files are:/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments/paragraphed_transcript, place the results in a new folder called rephrased_transcript into the parent folder found as a subfolder of parent folder (/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments)
-# 5) The code should be a class itself which will take as arguments the openai key and the source folder of the paragraphed transcript. For example: /Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments/paragraphed_transcript

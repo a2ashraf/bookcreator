@@ -1,6 +1,6 @@
 import os
 import openai
-
+from config import GPT_MODEL
 
 class Paragrapher:
     def __init__(self, folder_path, openai_key):
@@ -52,7 +52,7 @@ class Paragrapher:
     def get_paragraphs(self, text):
         openai.api_key = self.openai_key
         response = openai.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model=GPT_MODEL,
             messages=[
                 {"role": "user",
                  "content": f"Break the following text into coherent paragraphs:\n\n{text}"}
