@@ -4,6 +4,8 @@ from pydub import AudioSegment
 from audio_splitter import AudioSplitter
 from audiobook_extractor import AudiobookMetadataExtractor
 from google.cloud import storage, speech
+from paragrapher import Paragrapher
+
 
 root_path = "/Users/Ahsan/Desktop/part1/"
 openai.api_key = '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'
@@ -120,8 +122,8 @@ def transcribe_long_audio_with_google_cloud(gcs_uri):
     return transcribed_text.strip()
 
 
-# Step 3 - With the list of text files, it splits it up into paragraphs
-# Step 4 - With each paragraph it rewrites it
+
+
 # Step 5 - With the rewritten files, it then translates it
 
 # start - step 1 - done
@@ -142,3 +144,20 @@ def transcribe_long_audio_with_google_cloud(gcs_uri):
 #         with open(transcript_file, "w") as file:
 #             file.write(transcribed_text)
 
+# Step 3 - With the list of text files, it splits it up into paragraphs done
+# Solution:
+#  1) Grab text from file, split it up into 3500 chunks and for the last chunk, continue until you see a period.
+#  2) Ask gpt to break text up into paragraphs, write the result to a file and keep going until file is done
+# folder_path = '/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments'
+# openai_key = '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'
+# paragrapher = Paragrapher(folder_path, openai_key)
+# paragrapher.process_files()
+
+# Step 4 - With each paragraph it rewrites it
+#Solution:
+# 1) I have a folder which contains files where each file contains paragraphs.
+# 2) I want to write a script that will reach each file, and then for each paragraph, rephrase it/reword it using the following openai prompt:
+#   "Rewrite the paragraph while expanding on the topic, remove any references to specific names and where examples are given of popular figures, replace them with alternative examples which communicate the same point. The goal is to have the paragraph rewritten so that it avoids being too similar to the source paragraph while maintaining the context. Split the results into multiple paragraphs containing 3 sentences without reducing the content"
+# 3) Write the results into a file with the suffix _rephrased. For each source file, there should be an equivalaent _rephrased file.
+# 4) /Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments, that is an example of where the parent folder is, this is an example of where the source files are:/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments/paragraphed_transcript, place the results in a new folder called rephrased_transcript into the parent folder found as a subfolder of parent folder (/Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments)
+# 5) The code should be a class itself which will take as arguments the openai key and the source folder of the paragraphed transcript. For example: /Users/Ahsan/Documents/WORK/audiobooks_project/transcribed_segments/paragraphed_transcript
