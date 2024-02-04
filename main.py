@@ -10,6 +10,7 @@ from config import OPENAI_API_KEY
 from config import GPT_MODEL
 from config import GCS_PROJECT
 from config import GCS_BUCKET
+from elevenlabs import generate, play
 
 target_language = 'French'  # Change to your target language
 openai.api_key = OPENAI_API_KEY
@@ -102,7 +103,7 @@ def upload_audio_to_gcs(local_audio_file, gcs_bucket_name, gcs_blob_name):
 def convert_to_mono(input_audio_file, output_audio_file):
     audio = AudioSegment.from_wav(input_audio_file)
     audio = audio.set_channels(1)  # Convert to mono (single channel)
-    audio.export(output_audio_file, format="wav")
+    audio.export(output_audio_file, format="mp3")
 
 
 def transcribe_long_audio_with_google_cloud(gcs_uri):
@@ -164,10 +165,9 @@ def rewrite_each_paragraph():
     rephraser = Rephraser(source_folder, openai_key)
     rephraser.process_files()
 
-split_audiobook_into_audio_segments_by_chapters()   #step 1: Take audiobook and create chapters from it
-get_transcripts_from_audio()                        #step 2: Get the text from the audiobook
-paragraphize_text()                                 #step 3: create paragraphs from the long form text obtained in step 2
-rewrite_each_paragraph()                            #step 4: Rewrite all paragraphs using openai
-translate_to_language(target_language)              #step 5: Translate to a desired language
+# split_audiobook_into_audio_segments_by_chapters()   #step 1: Take audiobook and create chapters from it
+# get_transcripts_from_audio()                        #step 2: Get the text from the audiobook
+# paragraphize_text()                                 #step 3: create paragraphs from the long form text obtained in step 2
+# rewrite_each_paragraph()                            #step 4: Rewrite all paragraphs using openai
+# translate_to_language(target_language)              #step 5: Translate to a desired language
 
-#Step 6: Create audio book via eleven labs from new book:
